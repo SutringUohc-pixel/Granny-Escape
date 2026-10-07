@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>THE MEMORY EATER: GRANNY ESCAPE</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Courier New', Courier, monospace;
+            color: #fff;
+        }
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        /* UI overlay */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        /* HUD Top Bar */
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+        }
+        .status-box {
+            font-weight: bold;
+            font-size: 14px;
+            color: #ff3333;
+            text-shadow: 0 0 5px #000;
+        }
+        .hud-title {
+            font-size: 11px;
+            color: #aaa;
+            text-align: right;
+        }
+        /* Touch Controls Layer */
+        #touch-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+            display: none;
+        }
+        /* Joystick area (Left side) */
+        #joystick-zone {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            touch-action: none;
+        }
+        #joystick-knob {
+            position: absolute;
+            top: 35px;
+            left: 35px;
+            width: 50px;
+            height: 50px;
+            background: rgba(200, 30, 30, 0.6);
+            border: 2px solid #ff4444;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        /* Look Drag Zone (Right side) */
+        #look-zone {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 60%;
+            height: 80%;
+            touch-action: none;
+        }
+        /* Action Buttons */
+        .btn-group {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            display: grid;
+            grid-template-columns: repeat(2, 70px);
+            gap: 15px;
+        }
+        .touch-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #ff3333;
+            border-radius: 50%;
+            color: #fff;
+            font-weight: bold;
+            font-size: 11px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+            active-bg: #ff3333;
+        }
+        .touch-btn:active {
+            background: #ff3333;
+            transform: scale(0.95);
+        }
+        /* START / LOGIN SCREEN */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px 20px;
+            text-align: center;
+            pointer-events: auto;
+        }
+        .title-header h1 {
+            font-size: 22px;
+            color: #cc0000;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px #ff0000;
+            margin-bottom: 5px;
+        }
+        .title-header p {
+            font-size: 13px;
+            color: #888;
+        }
+        #start-btn {
+            width: 200px;
+            height: 60px;
+            background: #990000;
+            border: 2px solid #ff3333;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+            animation: pulse 1.5s infinite alternate;
+            cursor: pointer;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 10px rgba(255,0,0,0.5); }
+            100% { transform: scale(1.08); box-shadow: 0 0 25px rgba(255,0,0,0.9); }
+        }
+        .instructions {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.5;
+            max-width: 300px;
+        }
+        /* Jumpscare overlay */
+        #jumpscare-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: red;
+            z-index: 999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #jumpscare-overlay h2 {
+            font-size: 40px;
+            color: #000;
+            font-weight: 900;
+            animation: shake 0.1s infinite;
+        }
+        @keyframes shake {
+            0% { transform: translate(2px, 2px) rotate(0deg); }
+            50% { transform: translate(-2px, -2px) rotate(1deg); }
+            100% { transform: translate(2px, -2px) rotate(-1deg); }
+        }
+        /* Game Over / Win overlay */
+        #message-modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            border: 2px solid #ff3333;
+            padding: 30px;
+            text-align: center;
+            z-index: 200;
+            display: none;
+            pointer-events: auto;
+        }
+    </style>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Layer -->
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div class="status-box">
+                KEYS: <span id="key-count">0/3</span> | AMMO: <span id="ammo-count">6/18</span><br>
+                <span id="stun-status" style="color:#00ff00; font-size:11px;">GRANNY: HUNTING</span>
+            </div>
+            <div class="hud-title">
+                THE MEMORY EATER<br>Produced by Sutring'Uohc
+            </div>
+        </div>
+    </div>
+
+    <!-- Touch Controls -->
+    <div id="touch-controls">
+        <div id="joystick-zone">
+            <div id="joystick-knob"></div>
+        </div>
+        <div id="look-zone"></div>
+        <div class="btn-group">
+            <div class="touch-btn" id="btn-shoot">SHOOT</div>
+            <div class="touch-btn" id="btn-action">ACTION</div>
+            <div class="touch-btn" id="btn-light">LIGHT</div>
+            <div class="touch-btn" id="btn-behind">BEHIND</div>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <div class="title-header">
+            <h1>THE MEMORY EATER</h1>
+            <p>Produced by Sutring'Uohc</p>
+        </div>
+        <button id="start-btn">START GAME</button>
+        <div class="instructions">
+            Find 3 hidden keys to escape the house.<br>
+            Use gun to shoot and STUN Granny.<br>
+            Joystick = Move | Drag Screen = Look Around
+        </div>
+    </div>
+
+    <!-- Jumpscare Display -->
+    <div id="jumpscare-overlay">
+        <h2>GRANNY CAUGHT YOU!</h2>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="message-modal">
+        <h2 id="modal-title">GAME OVER</h2>
+        <p id="modal-desc" style="margin: 15px 0;">Granny ate your memory.</p>
+        <button onclick="location.reload()" style="padding:10px 20px; background:#ff3333; color:#fff; border:none; font-weight:bold;">RESTART</button>
+    </div>
+
+    <script>
+        // --- GAME STATE ---
+        let scene, camera, renderer;
+        let keysFound = 0;
+        let ammo = 6;
+        let isStunned = false;
+        let stunTimer = 0;
+        let gameActive = false;
+        let flashlightOn = true;
+        let flashlight;
+        
+        // Player & Controls
+        let playerPos = new THREE.Vector3(0, 1.6, 8);
+        let yaw = 0, pitch = 0;
+        let moveForward = 0, moveRight = 0;
+        let isLookingBehind = false;
+
+        // Entities
+        let granny, grannyMixer;
+        let keys = [];
+        let ammoBoxes = [];
+        let exitDoor;
+
+        // Web Audio API
+        let audioCtx, ambientOsc, heartbeatOsc;
+
+        // --- PROCEDURAL TEXTURES ---
+        function createWoodTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#3a2312'; ctx.fillRect(0,0,256,256);
+            ctx.fillStyle = '#261509';
+            for(let i=0; i<20; i++) {
+                ctx.fillRect(0, i*13, 256, 4);
+            }
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createWallTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#4a433b'; ctx.fillRect(0,0,256,256);
+            ctx.fillStyle = '#332d27';
+            for(let i=0; i<500; i++) {
+                ctx.fillRect(Math.random()*256, Math.random()*256, 2, 2);
+            }
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        // --- INIT THREE.JS SCENE ---
+        function initScene() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x050505, 0.08);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
+            camera.position.copy(playerPos);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x222222);
+            scene.add(ambientLight);
+
+            flashlight = new THREE.SpotLight(0xffffff, 2, 15, Math.PI / 6, 0.5);
+            scene.add(flashlight);
+            scene.add(flashlight.target);
+
+            // Build House
+            buildHouse();
+
+            // Spawn Granny
+            createGranny();
+
+            // Add Gun Model to Camera
+            createGun();
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // --- HOUSE BUILDER ---
+        function buildHouse() {
+            const woodTex = createWoodTexture();
+            const wallTex = createWallTexture();
+
+            // Floor & Ceiling
+            const floorGeo = new THREE.PlaneGeometry(20, 30);
+            const floorMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.8 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            scene.add(floor);
+
+            const ceilMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            const ceil = new THREE.Mesh(floorGeo, ceilMat);
+            ceil.position.y = 4;
+            ceil.rotation.x = Math.PI / 2;
+            scene.add(ceil);
+
+            // Room Lights
+            const lightPositions = [[0, 3.5, 8], [0, 3.5, 0], [0, 3.5, -8]];
+            lightPositions.forEach(p => {
+                const pLight = new THREE.PointLight(0xffaa44, 0.8, 8);
+                pLight.position.set(p[0], p[1], p[2]);
+                scene.add(pLight);
+            });
+
+            // Outer Walls
+            const wallMat = new THREE.MeshStandardMaterial({ map: wallTex });
+            const createWall = (w, h, d, x, y, z) => {
+                const geo = new THREE.BoxGeometry(w, h, d);
+                const mesh = new THREE.Mesh(geo, wallMat);
+                mesh.position.set(x, y, z);
+                scene.add(mesh);
+            };
+
+            createWall(20, 4, 0.5, 0, 2, -15); // Back
+            createWall(0.5, 4, 30, -10, 2, 0); // Left
+            createWall(0.5, 4, 30, 10, 2, 0);  // Right
+            createWall(20, 4, 0.5, 0, 2, 15);  // Front
+
+            // Exit Door
+            const doorGeo = new THREE.BoxGeometry(3, 3.5, 0.2);
+            const doorMat = new THREE.MeshStandardMaterial({ color: 0x880000 });
+            exitDoor = new THREE.Mesh(doorGeo, doorMat);
+            exitDoor.position.set(0, 1.75, 14.8);
+            scene.add(exitDoor);
+
+            // Spawn Keys & Ammo
+            spawnItems();
+        }
+
+        function spawnItems() {
+            const keyGeo = new THREE.TorusGeometry(0.15, 0.04, 8, 16);
+            const keyMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8 });
+
+            const keySpawns = [
+                new THREE.Vector3(-7, 0.5, -10),
+                new THREE.Vector3(7, 0.5, 2),
+                new THREE.Vector3(-6, 0.5, 8)
+            ];
+
+            keySpawns.forEach(pos => {
+                const key = new THREE.Mesh(keyGeo, keyMat);
+                key.position.copy(pos);
+                scene.add(key);
+                keys.push(key);
+            });
+        }
+
+        // --- 3D GRANNY MODEL ---
+        function createGranny() {
+            granny = new THREE.Group();
+
+            // Body
+            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.6, 1.8, 8);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x334433 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.9;
+            granny.add(body);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.35, 8, 8);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 2.0;
+            granny.add(head);
+
+            // Glowing Eyes
+            const eyeGeo = new THREE.SphereGeometry(0.05, 8, 8);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+            leftEye.position.set(-0.1, 2.05, 0.3);
+            const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+            rightEye.position.set(0.1, 2.05, 0.3);
+            granny.add(leftEye);
+            granny.add(rightEye);
+
+            granny.position.set(0, 0, -12);
+            scene.add(granny);
+        }
+
+        // --- GUN MODEL ---
+        let gunMesh;
+        function createGun() {
+            gunMesh = new THREE.Group();
+            const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.5), new THREE.MeshStandardMaterial({color: 0x111111}));
+            barrel.position.set(0.2, -0.2, -0.4);
+            gunMesh.add(barrel);
+            camera.add(gunMesh);
+            scene.add(camera);
+        }
+
+        // --- AUDIO SYNTHESIZER ---
+        function initAudio() {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                ambientOsc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                ambientOsc.type = 'sawtooth';
+                ambientOsc.frequency.setValueAtTime(40, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                ambientOsc.connect(gain);
+                gain.connect(audioCtx.destination);
+                ambientOsc.start();
+            } catch(e) {}
+        }
+
+        function playGunshot() {
+            if(!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.2);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        // --- CONTROLS & TOUCH ---
+        function setupControls() {
+            // Joystick
+            const zone = document.getElementById('joystick-zone');
+            const knob = document.getElementById('joystick-knob');
+
+            zone.addEventListener('touchmove', (e) => {
+                const rect = zone.getBoundingClientRect();
+                const touch = e.touches[0];
+                let x = touch.clientX - rect.left - 60;
+                let y = touch.clientY - rect.top - 60;
+                let dist = Math.hypot(x, y);
+                if(dist > 45) { x = (x/dist)*45; y = (y/dist)*45; }
+                knob.style.transform = `translate(${x}px, ${y}px)`;
+                moveRight = x / 45;
+                moveForward = -y / 45;
+            });
+
+            zone.addEventListener('touchend', () => {
+                knob.style.transform = 'translate(0px, 0px)';
+                moveForward = 0; moveRight = 0;
+            });
+
+            // Look
+            const lookZone = document.getElementById('look-zone');
+            let lastX = 0, lastY = 0;
+            lookZone.addEventListener('touchstart', (e) => {
+                lastX = e.touches[0].clientX;
+                lastY = e.touches[0].clientY;
+            });
+            lookZone.addEventListener('touchmove', (e) => {
+                let dx = e.touches[0].clientX - lastX;
+                let dy = e.touches[0].clientY - lastY;
+                yaw -= dx * 0.005;
+                pitch -= dy * 0.005;
+                pitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, pitch));
+                lastX = e.touches[0].clientX;
+                lastY = e.touches[0].clientY;
+            });
+
+            // Buttons
+            document.getElementById('btn-shoot').onclick = shoot;
+            document.getElementById('btn-action').onclick = interact;
+            document.getElementById('btn-light').onclick = () => {
+                flashlightOn = !flashlightOn;
+                flashlight.visible = flashlightOn;
+            };
+            document.getElementById('btn-behind').onclick = () => {
+                isLookingBehind = !isLookingBehind;
+            };
+        }
+
+        function shoot() {
+            if(ammo <= 0) return;
+            ammo--;
+            document.getElementById('ammo-count').innerText = `${ammo}/18`;
+            playGunshot();
+
+            // Gun recoil
+            gunMesh.position.z += 0.1;
+            setTimeout(() => gunMesh.position.z -= 0.1, 100);
+
+            // Hit test Granny
+            const dist = camera.position.distanceTo(granny.position);
+            if(dist < 10) {
+                isStunned = true;
+                stunTimer = 8; // 8 Seconds Stun
+                document.getElementById('stun-status').innerText = 'GRANNY: STUNNED';
+                document.getElementById('stun-status').style.color = '#ffff00';
+            }
+        }
+
+        function interact() {
+            // Key pickup
+            keys.forEach((key, index) => {
+                if(key.visible && camera.position.distanceTo(key.position) < 2) {
+                    key.visible = false;
+                    keysFound++;
+                    document.getElementById('key-count').innerText = `${keysFound}/3`;
+                }
+            });
+
+            // Escape
+            if(keysFound >= 3 && camera.position.distanceTo(exitDoor.position) < 3) {
+                gameActive = false;
+                document.getElementById('modal-title').innerText = "YOU ESCAPED!";
+                document.getElementById('modal-desc').innerText = "You survived Granny and escaped!";
+                document.getElementById('message-modal').style.display = 'block';
+            }
+        }
+
+        // --- GAME LOOP ---
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(!gameActive) return;
+
+            const delta = clock.getDelta();
+
+            // Handle Stun
+            if(isStunned) {
+                stunTimer -= delta;
+                if(stunTimer <= 0) {
+                    isStunned = false;
+                    document.getElementById('stun-status').innerText = 'GRANNY: HUNTING';
+                    document.getElementById('stun-status').style.color = '#ff0000';
+                }
+            } else {
+                // Granny pursues Player
+                const dir = new THREE.Vector3().subVectors(camera.position, granny.position).normalize();
+                granny.position.addScaledVector(dir, 1.2 * delta); // Slow walk
+                granny.lookAt(camera.position.x, granny.position.y, camera.position.z);
+
+                // Jumpscare collision
+                if(camera.position.distanceTo(granny.position) < 1.2) {
+                    triggerJumpscare();
+                }
+            }
+
+            // Player Movement
+            let currentYaw = yaw + (isLookingBehind ? Math.PI : 0);
+            camera.rotation.set(0, 0, 0);
+            camera.rotation.y = currentYaw;
+            camera.rotation.x = pitch;
+
+            const moveVec = new THREE.Vector3(moveRight, 0, -moveForward);
+            moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), currentYaw);
+            camera.position.addScaledVector(moveVec, 3.5 * delta);
+
+            // Clamp inside house bounds
+            camera.position.x = Math.max(-9, Math.min(9, camera.position.x));
+            camera.position.z = Math.max(-14, Math.min(14, camera.position.z));
+
+            // Flashlight Sync
+            flashlight.position.copy(camera.position);
+            const targetPos = new THREE.Vector3(0, 0, -1).applyMatrix4(camera.matrixWorld);
+            flashlight.target.position.copy(targetPos);
+
+            renderer.render(scene, camera);
+        }
+
+        function triggerJumpscare() {
+            gameActive = false;
+            document.getElementById('jumpscare-overlay').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('jumpscare-overlay').style.display = 'none';
+                document.getElementById('modal-title').innerText = "GAME OVER";
+                document.getElementById('modal-desc').innerText = "Granny caught you!";
+                document.getElementById('message-modal').style.display = 'block';
+            }, 1500);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- START BUTTON ---
+        document.getElementById('start-btn').onclick = () => {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('touch-controls').style.display = 'block';
+            initScene();
+            setupControls();
+            initAudio();
+            gameActive = true;
+            animate();
+        };
+    </script>
+</body>
+</html>
