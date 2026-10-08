@@ -1,2 +1,2 @@
-# Granny-Escape
-ကျွန်တော့ရဲ့ပထမဆုံးသော Granny-Escape game အစမ်းလေးပဲဖစ်ပါတယ်
+# Escape From Sutring
+ကျွန်တော့ရဲ့ပထမဆုံးသော Escape from Sutring  game အစမ်းလေးပဲဖစ်ပါတယ်
